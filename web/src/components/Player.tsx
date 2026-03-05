@@ -60,6 +60,26 @@ declare global {
 
 let youTubeApiPromise: Promise<YouTubeAPI> | null = null;
 
+const DRIVE_STREAM_ERROR_MESSAGE =
+  "Google Drive link could not be streamed. Make sure the file is set to 'Anyone with the link' and try again. Some Drive files require a download confirmation page and cannot be streamed reliably.";
+
+function isDriveSourceUrl(rawUrl: string | null): boolean {
+  if (!rawUrl) return false;
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.hostname.toLowerCase() === "drive.google.com") {
+      return true;
+    }
+
+    const proxied = parsed.searchParams.get("url");
+    if (!proxied) return false;
+    const upstream = new URL(proxied);
+    return upstream.hostname.toLowerCase() === "drive.google.com";
+  } catch {
+    return false;
+  }
+}
+
 function loadYouTubeAPI(): Promise<YouTubeAPI> {
   if (typeof window === "undefined") {
     return Promise.reject(new Error("YouTube API is only available in browser"));
@@ -116,6 +136,7 @@ export default function Player({
 
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [youtubeError, setYouTubeError] = useState<string | null>(null);
+  const [driveStreamError, setDriveStreamError] = useState<string | null>(null);
 
   const isApplyingRemoteUpdateRef = useRef(false);
   const isPlayerReadyRef = useRef(false);
@@ -150,6 +171,7 @@ export default function Player({
   }, [expectedTime, isPlaying, playbackRate]);
 
   const isYouTubeSource = sourceKind === "youtube" || Boolean(sourceVideoId);
+  const isDriveSource = useMemo(() => !isYouTubeSource && isDriveSourceUrl(sourceUrl), [isYouTubeSource, sourceUrl]);
   const youtubeVideoId = useMemo(() => {
     if (!isYouTubeSource) return null;
     const id = sourceVideoId?.trim() || "";
@@ -285,6 +307,10 @@ export default function Player({
       }
     };
   }, [isYouTubeSource, sourceUrl, shouldUseHlsJs]);
+
+  useEffect(() => {
+    setDriveStreamError(null);
+  }, [sourceUrl]);
 
   useEffect(() => {
     if (isYouTubeSource) return;
@@ -539,6 +565,7 @@ export default function Player({
           controls={canControl}
           onTimeUpdate={() => onTimeUpdate(videoRef.current?.currentTime ?? 0)}
           onLoadedMetadata={() => {
+            setDriveStreamError(null);
             isPlayerReadyRef.current = true;
             setRate(playbackRateRef.current);
             setTime(expectedTimeRef.current);
@@ -562,9 +589,20 @@ export default function Player({
             if (isApplyingRemoteUpdateRef.current || !isPlayerReadyRef.current) return;
             onSeekRequest(videoRef.current?.currentTime ?? 0);
           }}
+          onError={() => {
+            if (isDriveSource) {
+              setDriveStreamError(DRIVE_STREAM_ERROR_MESSAGE);
+            }
+          }}
+          onStalled={() => {
+            if (isDriveSource) {
+              setDriveStreamError(DRIVE_STREAM_ERROR_MESSAGE);
+            }
+          }}
         />
       )}
       {!sourceUrl ? <p className="hint">Host must load a video URL to begin.</p> : null}
+      {driveStreamError ? <p className="error">{driveStreamError}</p> : null}
       {autoplayBlocked ? (
         <button
           onClick={async () => {
