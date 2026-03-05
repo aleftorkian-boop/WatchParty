@@ -1,0 +1,14 @@
+{
+  "name": "watch-party-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "packageManager": "pnpm@9.12.2",
+  "scripts": {
+    "dev": "concurrently -n server,web \"pnpm --filter server dev\" \"pnpm --filter web dev\"",
+    "build": "pnpm --filter server build && pnpm --filter web build"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
+
