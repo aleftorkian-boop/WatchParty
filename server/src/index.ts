@@ -32,6 +32,7 @@ app.get("/health", (_req, res) => {
   res.json({ ok: true, now: Date.now() });
 });
 
+app.options("/resolve", cors({ origin: corsOrigin }));
 registerResolveRoute(app);
 
 app.options("/stream", streamPreflightHandler(proxyConfig));
