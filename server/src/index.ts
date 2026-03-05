@@ -10,7 +10,10 @@ dotenv.config();
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
-const corsOrigin = process.env.CORS_ORIGIN || "http://localhost:3000";
+
+// ✅ Better default for production. You can keep it strict by setting CORS_ORIGIN on Render.
+const corsOrigin = process.env.CORS_ORIGIN || "*";
+
 const proxyConfig = buildProxyConfig(process.env);
 
 app.use(
@@ -19,6 +22,10 @@ app.use(
     credentials: false,
   })
 );
+
+// ✅ Important: handle preflight for ALL routes (including /resolve)
+app.options("*", cors({ origin: corsOrigin, credentials: false }));
+
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_req, res) => {
@@ -26,6 +33,7 @@ app.get("/health", (_req, res) => {
 });
 
 registerResolveRoute(app);
+
 app.options("/stream", streamPreflightHandler(proxyConfig));
 app.get("/stream", streamHandler(proxyConfig));
 
@@ -33,7 +41,5 @@ const server = http.createServer(app);
 buildSocketServer(server, corsOrigin);
 
 server.listen(port, () => {
-  // eslint-disable-next-line no-console
   console.log(`Server listening on http://localhost:${port}`);
 });
-
