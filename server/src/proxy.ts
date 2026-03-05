@@ -1,4 +1,4 @@
-﻿import { Readable } from "node:stream";
+import { Readable } from "node:stream";
 import type { Request, Response } from "express";
 import { InMemoryRateLimiter } from "./rateLimit";
 import { isValidHttpUrl, parseAllowlist } from "./utils";
