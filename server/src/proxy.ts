@@ -104,7 +104,11 @@ export function streamHandler(config: ProxyConfig) {
         return;
       }
 
-      Readable.fromWeb(upstreamRes.body as unknown as ReadableStream<Uint8Array>).pipe(res);
+      
+
+// ...
+
+Readable.fromWeb(upstreamRes.body as any).pipe(res);
     } catch {
       if (!res.headersSent) {
         res.status(502).json({ error: "Failed to fetch upstream video" });
